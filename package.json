@@ -26,7 +26,9 @@
   "scripts": {
     "build": "npx tsc -b ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "eris": "^0.16.1"
+  },
   "devDependencies": {
     "@types/node": "^17.0.8",
     "@typescript-eslint/eslint-plugin": "^5.9.1",
