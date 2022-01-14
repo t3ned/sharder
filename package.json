@@ -1,0 +1,40 @@
+{
+  "name": "@t3ned/sharder",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "author": "T3NED <software@t3ned.com>",
+  "description": "A sharding and clustering solution for the Eris Discord API library.",
+  "license": "Apache-2.0",
+  "private": false,
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=v14.0.0",
+    "npm": ">=7.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/t3ned/sharder"
+  },
+  "bugs": {
+    "url": "https://github.com/t3ned/sharder/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npx tsc -b ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^17.0.8",
+    "@typescript-eslint/eslint-plugin": "^5.9.1",
+    "@typescript-eslint/parser": "^5.9.1",
+    "eslint": "^8.6.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.4"
+  }
+}
