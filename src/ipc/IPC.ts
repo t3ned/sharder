@@ -5,7 +5,7 @@ export class IPC<Callback extends IPCCallback = IPCCallback> extends EventEmitte
   /**
    * The registered IPC events
    */
-  public events = new Map<IPCMessageOP, Callback[]>();
+  public events = new Map<IPCMessageOp, Callback[]>();
 
   /**
    * Whether or not the IPC is listening for messages
@@ -17,7 +17,7 @@ export class IPC<Callback extends IPCCallback = IPCCallback> extends EventEmitte
    * @param name The name of the event
    * @param callback The event callback
    */
-  public addEvent(name: IPCMessageOP, callback: Callback): this {
+  public addEvent(name: IPCMessageOp, callback: Callback): this {
     const callbacks = this.events.get(name) ?? [];
     this.events.set(name, [...callbacks, callback]);
     this._listen();
@@ -29,7 +29,7 @@ export class IPC<Callback extends IPCCallback = IPCCallback> extends EventEmitte
    * @param name The name of the event
    * @param callback The event callback
    */
-  public removeEvent(name: IPCMessageOP, callback: Callback): this {
+  public removeEvent(name: IPCMessageOp, callback: Callback): this {
     const callbacks = this.events.get(name) ?? [];
     const eventCallbacks = callbacks.filter((cb) => cb !== callback);
     this.events.set(name, eventCallbacks);
@@ -81,10 +81,10 @@ export class IPC<Callback extends IPCCallback = IPCCallback> extends EventEmitte
   }
 }
 
-export type IPCMessageOP = string | number;
+export type IPCMessageOp = string | number;
 
 export interface IPCMessage<T = any> {
-  op: IPCMessageOP;
+  op: IPCMessageOp;
   d: T;
 }
 
