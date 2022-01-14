@@ -1,4 +1,8 @@
 export enum InternalIPCEvents {
   SendTo,
-  Broadcast
+  Broadcast,
+  FetchUser,
+  FetchGuild,
+  FetchChannel,
+  FetchMember
 }

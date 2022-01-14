@@ -1,5 +1,7 @@
 import { IPC, IPCMessageOp, IPCMessage } from "./IPC";
+import { InternalIPCEvents } from "../util/constants";
 import { generateIPCFetchId } from "../util/functions";
+import type { JSONCache } from "eris";
 
 export class ClusterIPC extends IPC {
   /**
@@ -19,6 +21,39 @@ export class ClusterIPC extends IPC {
     super();
 
     this.timeout = timeout;
+  }
+
+  /**
+   * Fetches a cached user
+   * @param id The id of the user
+   */
+  public fetchUser(id: string): Promise<JSONCache | undefined> {
+    return this.fetch<JSONCache>(InternalIPCEvents.FetchUser, id);
+  }
+
+  /**
+   * Fetches a cached guild
+   * @param id The id of the guild
+   */
+  public fetchGuild(id: string): Promise<JSONCache | undefined> {
+    return this.fetch<JSONCache>(InternalIPCEvents.FetchGuild, id);
+  }
+
+  /**
+   * Fetches a cached channel
+   * @param id The id of the channel
+   */
+  public fetchChannel(id: string): Promise<JSONCache | undefined> {
+    return this.fetch<JSONCache>(InternalIPCEvents.FetchChannel, id);
+  }
+
+  /**
+   * Fetches a cached member
+   * @param guildId The id of the guild
+   * @param id The id of the member
+   */
+  public fetchMember(guildId: string, id: string): Promise<JSONCache | undefined> {
+    return this.fetch<JSONCache>(InternalIPCEvents.FetchMember, guildId, id);
   }
 
   /**
