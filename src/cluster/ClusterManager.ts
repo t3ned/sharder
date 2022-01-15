@@ -5,6 +5,7 @@ import type {
 } from "../struct/Strategy";
 
 import { ILogger, Logger } from "../struct/Logger";
+import type { ClusterConfig } from "./Cluster";
 import { Client, ClientOptions } from "eris";
 import { EventEmitter } from "events";
 
@@ -84,6 +85,15 @@ export class ClusterManager extends EventEmitter {
    */
   public token!: string;
 
+  /**
+   * The options for all the clusters held by the manager
+   */
+  #clusterConfigs: ClusterConfig[] = [];
+
+  /**
+   * @param token The token used to login to discord
+   * @param options The options for the manager
+   */
   public constructor(token: string, options: Partial<ClusterManagerOptions> = {}) {
     super();
 
@@ -132,6 +142,42 @@ export class ClusterManager extends EventEmitter {
   public setReconnectStrategy(strategy: IReconnectStrategy): this {
     this.reconnectStrategy = strategy;
     return this;
+  }
+
+  /**
+   * Gets the config for a cluster
+   * @param id The id of the cluster
+   */
+  public getCluster(id: number): ClusterConfig | undefined {
+    return this.#clusterConfigs.find((config) => config.id === id);
+  }
+
+  /**
+   * Sets the config for a cluster
+   * @param config The cluster config
+   */
+  public setCluster(config: AddClusterConfig): this {
+    if (this.getCluster(config.id)) throw new Error("Cluster#id must be unique");
+    const shardCount = config.lastShardId - config.firstShardId + 1;
+    this.#clusterConfigs.push({ ...config, shardCount });
+    return this;
+  }
+
+  /**
+   * Deletes the config for a cluster
+   * @param id The id of the cluster
+   */
+  public deleteCluster(id: number): this {
+    const idx = this.#clusterConfigs.findIndex((config) => config.id === id);
+    if (idx !== -1) this.#clusterConfigs.splice(idx, 1);
+    return this;
+  }
+
+  /**
+   * The options for all the clusters held by the manager
+   */
+  public get clusterConfigs(): ClusterConfig[] {
+    return this.#clusterConfigs;
   }
 }
 
@@ -186,3 +232,6 @@ export interface ClusterManagerOptions {
    */
   ipcTimeout: number;
 }
+
+// eslint-disable-next-line prettier/prettier
+export type AddClusterConfig = Pick<ClusterConfig, "name" | "id" | "firstShardId" | "lastShardId">;
