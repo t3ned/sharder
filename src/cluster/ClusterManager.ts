@@ -8,6 +8,7 @@ import { ILogger, Logger } from "../struct/Logger";
 import type { ClusterConfig } from "./Cluster";
 import { Client, ClientOptions } from "eris";
 import { EventEmitter } from "events";
+import cluster from "cluster";
 
 export class ClusterManager extends EventEmitter {
   /**
@@ -171,6 +172,38 @@ export class ClusterManager extends EventEmitter {
     const idx = this.#clusterConfigs.findIndex((config) => config.id === id);
     if (idx !== -1) this.#clusterConfigs.splice(idx, 1);
     return this;
+  }
+
+  /**
+   * Starts the worker for a cluster
+   * @param id The id of the cluster
+   */
+  public startCluster(id: number): ClusterConfig | null {
+    const config = this.getCluster(id);
+    if (!config) return null;
+
+    const worker = cluster.fork();
+    config.workerId = worker.id;
+
+    this.logger.info(`Started cluster ${id}`);
+    return config;
+  }
+
+  /**
+   * Stops the worker for a cluster
+   * @param id The id of the cluster
+   */
+  public stopCluster(id: number): ClusterConfig | null {
+    const config = this.getCluster(id);
+    if (!config || typeof config.workerId === "undefined") return null;
+
+    const worker = cluster.workers?.[config.workerId];
+    if (!worker) return null;
+
+    worker.kill();
+
+    this.logger.info(`Stopped cluster ${id}`);
+    return config;
   }
 
   /**
