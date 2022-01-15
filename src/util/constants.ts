@@ -5,6 +5,9 @@ export enum InternalIPCEvents {
   IdentifyCluster,
   Identify,
 
+  ClusterReady,
+  Connect,
+
   FetchUser,
   FetchGuild,
   FetchChannel,

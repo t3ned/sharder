@@ -8,6 +8,9 @@ import {
   IClusterStrategy,
   IConnectStrategy,
   IReconnectStrategy,
+  sharedClusterStrategy,
+  orderedConnectStrategy,
+  queuedReconnectStrategy,
   consts
 } from "../index";
 
@@ -109,6 +112,11 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   #clusterConfigs: ClusterConfig[] = [];
 
   /**
+   * The total shards to connect
+   */
+  #shardCount = 0;
+
+  /**
    * The manager's stats
    */
   #stats: ClusterManagerStats;
@@ -143,6 +151,11 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
     this.#stats = {
       clustersIdentified: 0
     };
+
+    // Add default strategies
+    this.setClusterStrategy(sharedClusterStrategy());
+    this.setConnectStrategy(orderedConnectStrategy());
+    this.setReconnectStrategy(queuedReconnectStrategy());
   }
 
   /**
@@ -266,6 +279,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
       process.on("unhandledRejection", this._handleRejection.bind(this));
       cluster.on("message", this._handleMessage.bind(this));
       cluster.on("exit", this.restartCluster.bind(this));
+      this.queue.on("connectCluster", this._connectCluster.bind(this));
 
       process.nextTick(async () => {
         this.logger.info("Initializing clusters...");
@@ -284,7 +298,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
 
         // Run connect strategy
         this.logger.info(`Connecting using the '${this.connectStrategy.name}' strategy`);
-        await this.connectStrategy.run(this);
+        await this.connectStrategy.run(this, this.#clusterConfigs);
       });
     } else {
       const cluster = new Cluster(this);
@@ -315,10 +329,41 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   }
 
   /**
+   * Fetches the estimated guild count for the client
+   */
+  public async fetchGuildCount(): Promise<number> {
+    const sessionData = await this.restClient.getBotGateway().catch(() => null);
+    if (!sessionData) throw new Error("Failed to fetch guild count");
+    this.logger.info(`Discord recommended ${sessionData.shards} shards`);
+    return sessionData.shards * 1000;
+  }
+
+  /**
+   * Fetches the number of shards to spawn
+   */
+  public async fetchShardCount(): Promise<number> {
+    const guildCount = await this.fetchGuildCount();
+    const shardCount = Math.ceil(guildCount / this.guildsPerShard);
+    this.#shardCount = Math.max(this.shardCountOverride, shardCount);
+    return this.#shardCount;
+  }
+
+  /**
    * A promise which resolves once all the clusters have identified
    */
   private _awaitIdentified(): Promise<void> {
     return new Promise((resolve) => this.once("identified", () => resolve()));
+  }
+
+  /**
+   * Connects a cluster
+   * @param cluster The cluster to connect
+   */
+  private _connectCluster(cluster: ClusterConfig): void {
+    this.sendTo(cluster.id, {
+      op: InternalIPCEvents.Connect,
+      d: cluster
+    });
   }
 
   /**
@@ -348,6 +393,10 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
     if (!config) return;
 
     switch (message.op) {
+      case InternalIPCEvents.ClusterReady: {
+        setTimeout(() => this.queue.next(), this.clusterTimeout);
+        break;
+      }
       case InternalIPCEvents.IdentifyCluster: {
         const payload: IdentifyPayload = {
           name: config.name,

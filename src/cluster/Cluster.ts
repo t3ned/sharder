@@ -134,6 +134,13 @@ export class Cluster<T extends Client = Client> {
       logger.info(`[C${this.id}] Shards ${firstShardId} - ${lastShardId} are ready`);
     });
 
+    client.once("ready", () => {
+      process.send?.({
+        op: InternalIPCEvents.ClusterReady,
+        d: {}
+      });
+    });
+
     client.on("shardDisconnect", (_, id) => {
       logger.error(`[C${this.id}] Shard ${id} disconnected`);
 
@@ -200,10 +207,16 @@ export class Cluster<T extends Client = Client> {
         });
       }
     });
+
+    this.ipc.addEvent(InternalIPCEvents.Connect, this.connect.bind(this));
   }
 
-  // public up() {}
-  // public down() {}
+  /**
+   * Connects all the shards in the cluster
+   */
+  public connect(): Promise<void> {
+    return this.client.connect();
+  }
 
   /**
    * Checks whether or not the cluster is dead
