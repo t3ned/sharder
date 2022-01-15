@@ -1,6 +1,6 @@
 import type { ClusterManager, IdentifyPayload } from "./ClusterManager";
 import { ClusterIPC } from "../ipc/ClusterIPC";
-import type { Client } from "eris";
+import type { Client, ClientOptions } from "eris";
 import { InternalIPCEvents } from "../util/constants";
 import cluster from "cluster";
 
@@ -46,7 +46,7 @@ export class Cluster<T extends Client = Client> {
   public lastShardId!: number;
 
   /**
-   * The total shard count for the cluster
+   * The total shard count for all clusters
    */
   public shardCount!: number;
 
@@ -82,15 +82,120 @@ export class Cluster<T extends Client = Client> {
     process.on("uncaughtException", this._handleException.bind(this));
     process.on("unhandledRejection", this._handleRejection.bind(this));
 
+    const { clientOptions, clientBase, token, logger, firstShardId, lastShardId } =
+      this.manager;
+
     // Identify cluster
     await this._identify();
     if (this.id === -1) return;
 
-    console.log(this);
+    this.ipc.clusterId = this.id;
+    this.status = "IDENTIFIED";
+
+    const options: ClientOptions = {
+      ...clientOptions,
+      autoreconnect: true,
+      firstShardID: this.firstShardId,
+      lastShardID: this.lastShardId,
+      maxShards: this.shardCount
+    };
+
+    // Initialise client
+    const client = new clientBase(token, options);
+    Reflect.defineProperty(this, "client", { value: client });
+    Reflect.defineProperty(this.client, "cluster", { value: this });
+
+    client.on("connect", (id) => {
+      logger.info(`[C${this.id}] Shard ${id} established a connection`);
+    });
+
+    client.on("shardReady", (id) => {
+      if (id === this.firstShardId) this.status = "CONNECTING";
+      logger.info(`[C${this.id}] Shard ${id} is ready`);
+    });
+
+    client.on("ready", () => {
+      this.status = "READY";
+      logger.info(`[C${this.id}] Shards ${firstShardId} - ${lastShardId} are ready`);
+    });
+
+    client.on("shardDisconnect", (_, id) => {
+      logger.error(`[C${this.id}] Shard ${id} disconnected`);
+
+      if (this.isDead) {
+        this.status = "DEAD";
+        logger.error(`[C${this.id}] All shards died`);
+      }
+    });
+
+    client.on("shardResume", (id) => {
+      if (this.isDead) this.status = "CONNECTING";
+      logger.info(`[C${this.id}] Shard ${id} resumed`);
+    });
+
+    client.on("error", (error, id) => {
+      logger.error(`[C${this.id}] Shard ${id ?? "unknown"} error: ${error}`);
+    });
+
+    client.on("warn", (message, id) => {
+      logger.warn(`[C${this.id}] Shard ${id ?? "unknown"} warning: ${message}`);
+    });
+
+    this.ipc.addEvent(InternalIPCEvents.FetchUser, async (data) => {
+      const value = this.client.users.get(data.meta[0]);
+
+      if (value) {
+        this.ipc.sendTo(data.clusterId, {
+          op: data.fetchId,
+          d: value
+        });
+      }
+    });
+
+    this.ipc.addEvent(InternalIPCEvents.FetchGuild, async (data) => {
+      const value = this.client.guilds.get(data.meta[0]);
+
+      if (value) {
+        this.ipc.sendTo(data.clusterId, {
+          op: data.fetchId,
+          d: value
+        });
+      }
+    });
+
+    this.ipc.addEvent(InternalIPCEvents.FetchChannel, async (data) => {
+      const value = this.client.getChannel(data.meta[0]);
+
+      if (value) {
+        this.ipc.sendTo(data.clusterId, {
+          op: data.fetchId,
+          d: value
+        });
+      }
+    });
+
+    this.ipc.addEvent(InternalIPCEvents.FetchMember, async (data) => {
+      const guild = this.client.guilds.get(data.meta[0]);
+      const value = guild?.members.get(data.meta[1]);
+
+      if (value) {
+        this.ipc.sendTo(data.clusterId, {
+          op: data.fetchId,
+          d: value
+        });
+      }
+    });
   }
 
   // public up() {}
   // public down() {}
+
+  /**
+   * Checks whether or not the cluster is dead
+   */
+  public get isDead(): boolean {
+    return this.client.shards.every((shard) => shard.status === "disconnected");
+  }
 
   private _identify(): Promise<boolean> {
     return new Promise((resolve) => {
@@ -148,4 +253,10 @@ export interface ClusterConfig {
   shardCount: number;
 }
 
-export type ClusterStatus = "IDLING" | "WAITING" | "CONNECTING" | "READT" | "DEAD";
+export type ClusterStatus = "IDLING" | "IDENTIFIED" | "CONNECTING" | "READY" | "DEAD";
+
+declare module "eris" {
+  export interface Client {
+    readonly cluster: Cluster;
+  }
+}
