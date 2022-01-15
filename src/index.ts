@@ -12,5 +12,6 @@ export * from "./ipc/IPC";
 export * from "./ipc/ClusterIPC";
 
 // struct
+export * from "./struct/ClusterQueue";
 export * from "./struct/Logger";
 export * from "./struct/Strategy";

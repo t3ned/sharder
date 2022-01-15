@@ -1,6 +1,7 @@
 import {
   Cluster,
   ClusterConfig,
+  ClusterQueue,
   ILogger,
   Logger,
   IPCMessage,
@@ -17,6 +18,11 @@ import cluster, { Worker } from "cluster";
 const { InternalIPCEvents } = consts;
 
 export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
+  /**
+   * The queue for connecting clusters sequentially
+   */
+  public queue = new ClusterQueue();
+
   /**
    * The rest client used for API requests
    */
