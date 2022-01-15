@@ -37,9 +37,9 @@ export interface IReconnectStrategy {
   /**
    * Runs the strategy to reconnect a cluster
    * @param manager The manager running the strategy
-   * @param clusterId The id of the cluster that died
+   * @param cluster The cluster that died
    */
-  run(manager: ClusterManager, clusterId: number): Promise<void>;
+  run(manager: ClusterManager, cluster: ClusterConfig): Promise<void>;
 }
 
 /**
@@ -149,9 +149,11 @@ export const orderedConnectStrategy = (): IConnectStrategy => {
 export const queuedReconnectStrategy = (): IReconnectStrategy => {
   return {
     name: "queued",
-    run: async (manager, clusterId) => {
-      const cluster = manager.getCluster(clusterId);
-      if (cluster) return orderedConnectStrategy().run(manager, [cluster]);
+    run: async (manager, cluster) => {
+      const newCluster = manager.startCluster(cluster.id);
+      if (!newCluster) return;
+      manager.logger.info(`[C${cluster.id}] Queued to reconnect`);
+      manager.queue.enqueue(newCluster);
     }
   };
 };

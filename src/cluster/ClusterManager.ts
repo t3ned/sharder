@@ -233,7 +233,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
     const worker = cluster.fork();
     config.workerId = worker.id;
 
-    this.logger.info(`Started cluster ${id}`);
+    this.logger.info(`[C${id}] Started worker`);
     return config;
   }
 
@@ -250,7 +250,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
 
     worker.kill();
 
-    this.logger.info(`Stopped cluster ${id}`);
+    this.logger.info(`[C${id}] Stopped worker`);
     return config;
   }
 
@@ -259,8 +259,16 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
    * @param worker The worker to restart
    * @param code The reason for exiting
    */
-  public restartCluster(worker: Worker, code = 0): void {
-    void worker, code;
+  public async restartCluster(worker: Worker, code: number): Promise<void> {
+    const config = this.getClusterByWorkerId(worker.id);
+    if (!config) return;
+
+    if (!worker.isDead()) return void this.stopCluster(config.id);
+
+    this.logger.error(`[C${config.id}] Died with exit code ${code ?? null}`);
+    this.logger.warn(`[C${config.id}] Attempting to restart...`);
+
+    return this.reconnectStrategy.run(this, config);
   }
 
   /**

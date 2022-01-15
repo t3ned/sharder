@@ -18,16 +18,14 @@ export class ClusterQueue extends TypedEmitter<ClusterQueueEvents> {
    */
   public enqueue(cluster: ClusterConfig): void {
     this.clusters.push(cluster);
-    this.process();
+    if (!this.isProcessing) this.process();
   }
 
   /**
    * Processes the next cluster
    */
   public async process(): Promise<void> {
-    if (this.isProcessing) return;
     this.isProcessing = true;
-
     const cluster = this.clusters.shift();
 
     if (!cluster) {

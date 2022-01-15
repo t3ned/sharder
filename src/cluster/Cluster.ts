@@ -5,6 +5,7 @@ import {
   consts,
   SyncedRequestHandler
 } from "../index";
+
 import type { Client, ClientOptions } from "eris";
 import cluster from "cluster";
 
