@@ -1,5 +1,4 @@
-import type { ClusterIPC } from "../ipc/ClusterIPC";
-import type { Cluster } from "./Cluster";
+import type { Cluster, ClusterIPC } from "../index";
 import type { Client } from "eris";
 
 export abstract class ClusterLaunch<T extends Client = Client> {

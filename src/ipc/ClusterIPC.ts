@@ -1,7 +1,7 @@
-import { IPC, IPCMessageOp, IPCMessage } from "./IPC";
-import { InternalIPCEvents } from "../util/constants";
-import { generateIPCFetchId } from "../util/functions";
+import { IPC, IPCMessageOp, IPCMessage, consts, util } from "../index";
 import type { JSONCache } from "eris";
+
+const { InternalIPCEvents } = consts;
 
 export class ClusterIPC extends IPC {
   /**
@@ -62,7 +62,7 @@ export class ClusterIPC extends IPC {
    * @param meta The meta data
    */
   public fetch<T = any>(op: IPCMessageOp, ...meta: any[]): Promise<T | undefined> {
-    const id = generateIPCFetchId(op);
+    const id = util.generateIPCFetchId(op);
 
     const fetched = new Promise<T | undefined>((resolve) => {
       const callback = async (data: T | undefined) => {

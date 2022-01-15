@@ -1,7 +1,8 @@
-import { InternalIPCEvents } from "../util/constants";
-import { EventEmitter } from "events";
+import { consts } from "../index";
 
-export class IPC<Callback extends IPCCallback = IPCCallback> extends EventEmitter {
+const { InternalIPCEvents } = consts;
+
+export class IPC<Callback extends IPCCallback = IPCCallback> {
   /**
    * The registered IPC events
    */

@@ -1,4 +1,4 @@
-import type { ClusterManager } from "../cluster/ClusterManager";
+import type { ClusterManager } from "../index";
 
 export interface IClusterStrategy {
   /**

@@ -1,16 +1,20 @@
-import type {
+import {
+  Cluster,
+  ClusterConfig,
+  ILogger,
+  Logger,
+  IPCMessage,
   IClusterStrategy,
   IConnectStrategy,
-  IReconnectStrategy
-} from "../struct/Strategy";
+  IReconnectStrategy,
+  consts
+} from "../index";
 
-import { ILogger, Logger } from "../struct/Logger";
-import { Cluster, ClusterConfig } from "./Cluster";
-import { Client, ClientOptions } from "eris";
 import { TypedEmitter } from "tiny-typed-emitter";
-import type { IPCMessage } from "../ipc/IPC";
+import { Client, ClientOptions } from "eris";
 import cluster, { Worker } from "cluster";
-import { InternalIPCEvents } from "../util/constants";
+
+const { InternalIPCEvents } = consts;
 
 export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   /**
