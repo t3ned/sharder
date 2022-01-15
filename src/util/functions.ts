@@ -6,5 +6,5 @@ import { randomBytes } from "crypto";
  * @param op The IPC op
  */
 export const generateIPCFetchId = (op: IPCMessageOp): string => {
-  return `ipc.${op}.${randomBytes(8).toString("hex")}`;
+  return `ipc.${op}.${randomBytes(16).toString("hex")}`;
 };
