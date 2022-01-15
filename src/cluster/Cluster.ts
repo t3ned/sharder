@@ -84,6 +84,9 @@ export class Cluster<T extends Client = Client> {
     this.ipc = new ClusterIPC(manager.ipcTimeout);
   }
 
+  /**
+   * Spawns the cluster
+   */
   public async spawn(): Promise<void> {
     process.on("uncaughtException", this._handleException.bind(this));
     process.on("unhandledRejection", this._handleRejection.bind(this));
@@ -219,6 +222,9 @@ export class Cluster<T extends Client = Client> {
     return this.client.shards.every((shard) => shard.status === "disconnected");
   }
 
+  /**
+   * Attempts to identify the cluster
+   */
   private _identify(): Promise<boolean> {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => resolve(false), 3000);
