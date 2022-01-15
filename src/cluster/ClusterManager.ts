@@ -10,7 +10,7 @@ import { Client, ClientOptions } from "eris";
 import { TypedEmitter } from "tiny-typed-emitter";
 import type { IPCMessage } from "../ipc/IPC";
 import cluster, { Worker } from "cluster";
-import { InternalIPCEvents } from "util/constants";
+import { InternalIPCEvents } from "../util/constants";
 
 export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   /**

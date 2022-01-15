@@ -1,7 +1,7 @@
 import type { ClusterManager, IdentifyPayload } from "./ClusterManager";
 import { ClusterIPC } from "../ipc/ClusterIPC";
 import type { Client } from "eris";
-import { InternalIPCEvents } from "util/constants";
+import { InternalIPCEvents } from "../util/constants";
 import cluster from "cluster";
 
 export class Cluster<T extends Client = Client> {
