@@ -5,12 +5,14 @@ import type {
 } from "../struct/Strategy";
 
 import { ILogger, Logger } from "../struct/Logger";
-import type { ClusterConfig } from "./Cluster";
+import { Cluster, ClusterConfig } from "./Cluster";
 import { Client, ClientOptions } from "eris";
-import { EventEmitter } from "events";
-import cluster from "cluster";
+import { TypedEmitter } from "tiny-typed-emitter";
+import type { IPCMessage } from "../ipc/IPC";
+import cluster, { Worker } from "cluster";
+import { InternalIPCEvents } from "util/constants";
 
-export class ClusterManager extends EventEmitter {
+export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   /**
    * The rest client used for API requests
    */
@@ -154,6 +156,14 @@ export class ClusterManager extends EventEmitter {
   }
 
   /**
+   * Gets the config for a cluster by worker id
+   * @param id The id of the worker
+   */
+  public getClusterByWorkerId(id: number): ClusterConfig | undefined {
+    return this.#clusterConfigs.find((config) => config.workerId === id);
+  }
+
+  /**
    * Sets the config for a cluster
    * @param config The cluster config
    */
@@ -207,12 +217,130 @@ export class ClusterManager extends EventEmitter {
   }
 
   /**
+   * Restarts the worker for a cluster
+   * @param worker The worker to restart
+   * @param code The reason for exiting
+   */
+  public restartCluster(worker: Worker, code = 0): void {
+    void worker, code;
+  }
+
+  /**
    * The options for all the clusters held by the manager
    */
   public get clusterConfigs(): ClusterConfig[] {
     return this.#clusterConfigs;
   }
+
+  /**
+   * Launches all the clusters
+   */
+  public launch(): void {
+    if (cluster.isPrimary) {
+      process.on("uncaughtException", this._handleException.bind(this));
+      process.on("unhandledRejection", this._handleRejection.bind(this));
+      cluster.on("message", this._handleMessage.bind(this));
+      cluster.on("exit", this.restartCluster.bind(this));
+
+      process.nextTick(async () => {
+        this.logger.info("Initializing clusters...");
+        cluster.setupPrimary();
+
+        // Run cluster strategy
+        this.logger.info(`Clustering using the '${this.clusterStrategy.name}' strategy`);
+        await this.clusterStrategy.run(this);
+
+        if (!this.clusterConfigs.length)
+          throw new Error("Cluster strategy failed to produce at least 1 clusterer");
+
+        // Wait for all the clusters to identify
+        await this._awaitIdentified();
+        this.logger.info("Finished identifying clusters");
+
+        // Run connect strategy
+        this.logger.info(`Connecting using the '${this.connectStrategy.name}' strategy`);
+        await this.connectStrategy.run(this);
+      });
+    } else {
+      const cluster = new Cluster(this);
+      cluster.spawn();
+    }
+  }
+
+  /**
+   * Sends a message to a cluster
+   * @param id The id of the cluster
+   * @param message The message to send
+   */
+  public sendTo(id: number, message: IPCMessage): void {
+    const config = this.getCluster(id);
+    if (!config || typeof config.workerId === "undefined") return;
+    const worker = cluster.workers?.[config.workerId];
+    if (worker) worker.send(message);
+  }
+
+  /**
+   * Sends a message to all the clusters
+   * @param message The message to send
+   */
+  public broadcast(message: IPCMessage): void {
+    for (const config of this.#clusterConfigs) {
+      this.sendTo(config.id, message);
+    }
+  }
+
+  /**
+   * A promise which resolves once all the clusters have identified
+   */
+  private _awaitIdentified(): Promise<void> {
+    return new Promise((resolve) => this.once("identified", () => resolve()));
+  }
+
+  /**
+   * Handles an unhandled exception
+   * @param error The exception
+   */
+  private _handleException(error: Error): void {
+    this.logger.error(error);
+  }
+
+  /**
+   * Handles unhandled promise rejections
+   * @param reason The reason the promise was rejected
+   * @param p The promise
+   */
+  private _handleRejection(reason: Error, p: Promise<any>): void {
+    this.logger.error(`Unhandled rejection at Promise: ${p}, reason: ${reason}`);
+  }
+
+  /**
+   * Handles a message sent by a worker
+   * @param worker The worker that sent the message
+   * @param message The message
+   */
+  private _handleMessage(worker: Worker, message: IPCMessage): void {
+    const config = this.getClusterByWorkerId(worker.id);
+    if (!config) return;
+
+    switch (message.op) {
+      case InternalIPCEvents.IdentifyCluster: {
+        const payload: IdentifyPayload = {
+          name: config.name,
+          id: config.id,
+          firstShardId: config.firstShardId,
+          lastShardId: config.lastShardId,
+          shardCount: config.shardCount
+        };
+
+        this.sendTo(config.id, { op: InternalIPCEvents.Identify, d: payload });
+      }
+    }
+  }
 }
+
+export type ClusterManagerEvents = {
+  identified: () => void;
+};
 
 export interface ClusterManagerOptions {
   /**
@@ -268,3 +396,5 @@ export interface ClusterManagerOptions {
 
 // eslint-disable-next-line prettier/prettier
 export type AddClusterConfig = Pick<ClusterConfig, "name" | "id" | "firstShardId" | "lastShardId">;
+
+export type IdentifyPayload = Omit<ClusterConfig, "workerId">;
