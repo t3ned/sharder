@@ -27,7 +27,8 @@
     "build": "npx tsc -b ."
   },
   "dependencies": {
-    "eris": "^0.16.1"
+    "eris": "^0.16.1",
+    "tiny-typed-emitter": "^2.1.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.8",
