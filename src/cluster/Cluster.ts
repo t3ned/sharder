@@ -88,19 +88,13 @@ export class Cluster<T extends Client = Client> {
     process.on("uncaughtException", this._handleException.bind(this));
     process.on("unhandledRejection", this._handleRejection.bind(this));
 
-    const {
-      clientOptions,
-      clientBase,
-      token,
-      logger,
-      useSyncedRequestHandler,
-      firstShardId,
-      lastShardId
-    } = this.manager;
-
     // Identify cluster
     await this._identify();
     if (this.id === -1) return;
+
+    const { firstShardId, lastShardId } = this;
+    const { clientOptions, clientBase, useSyncedRequestHandler, token, logger } =
+      this.manager;
 
     this.ipc.clusterId = this.id;
     this.status = "IDENTIFIED";
@@ -110,7 +104,7 @@ export class Cluster<T extends Client = Client> {
       autoreconnect: true,
       firstShardID: this.firstShardId,
       lastShardID: this.lastShardId,
-      maxShards: this.shardCount
+      maxShards: this.manager.shardCount
     };
 
     // Initialise client
@@ -125,7 +119,7 @@ export class Cluster<T extends Client = Client> {
     });
 
     client.on("shardReady", (id) => {
-      if (id === this.firstShardId) this.status = "CONNECTING";
+      if (id === firstShardId) this.status = "CONNECTING";
       logger.info(`[C${this.id}] Shard ${id} is ready`);
     });
 

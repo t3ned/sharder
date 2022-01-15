@@ -271,6 +271,13 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   }
 
   /**
+   * Gets the total shards to connect
+   */
+  public get shardCount(): number {
+    return this.#shardCount;
+  }
+
+  /**
    * Launches all the clusters
    */
   public launch(): void {

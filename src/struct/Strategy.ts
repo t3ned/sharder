@@ -99,6 +99,7 @@ export const customClusterStrategy = (
       }
 
       const shardChunks = util.chunkShards(clusterCount, firstShardId, lastShardId, true);
+      manager.logger.info(`Calculated ${shardCount} shards for connection`);
 
       for (let i = 0; i < shardChunks.length; i++) {
         const shardChunk = shardChunks[i];
