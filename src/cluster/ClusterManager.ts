@@ -94,6 +94,11 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   #clusterConfigs: ClusterConfig[] = [];
 
   /**
+   * The manager's stats
+   */
+  #stats: ClusterManagerStats;
+
+  /**
    * @param token The token used to login to discord
    * @param options The options for the manager
    */
@@ -118,6 +123,10 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
     this.clusterIdOffset = options.clusterIdOffset ?? 0;
     this.clusterTimeout = options.clusterTimeout ?? 5000;
     this.ipcTimeout = options.ipcTimeout ?? 10000;
+
+    this.#stats = {
+      clustersIdentified: 0
+    };
   }
 
   /**
@@ -333,13 +342,17 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
         };
 
         this.sendTo(config.id, { op: InternalIPCEvents.Identify, d: payload });
+
+        if (++this.#stats.clustersIdentified === this.#clusterConfigs.length) {
+          this.emit("identified", this.#stats.clustersIdentified);
+        }
       }
     }
   }
 }
 
 export type ClusterManagerEvents = {
-  identified: () => void;
+  identified: (clusters: number) => void;
 };
 
 export interface ClusterManagerOptions {
@@ -398,3 +411,7 @@ export interface ClusterManagerOptions {
 export type AddClusterConfig = Pick<ClusterConfig, "name" | "id" | "firstShardId" | "lastShardId">;
 
 export type IdentifyPayload = Omit<ClusterConfig, "workerId">;
+
+export interface ClusterManagerStats {
+  clustersIdentified: number;
+}
