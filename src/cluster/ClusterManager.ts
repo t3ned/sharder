@@ -343,7 +343,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
    * @param worker The worker that sent the message
    * @param message The message
    */
-  private _handleMessage(worker: Worker, message: IPCMessage): void {
+  private async _handleMessage(worker: Worker, message: IPCMessage): Promise<void> {
     const config = this.getClusterByWorkerId(worker.id);
     if (!config) return;
 
@@ -362,6 +362,41 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
         if (++this.#stats.clustersIdentified === this.#clusterConfigs.length) {
           this.emit("identified", this.#stats.clustersIdentified);
         }
+
+        break;
+      }
+      case InternalIPCEvents.ApiRequest: {
+        try {
+          const data = await this.restClient.requestHandler.request(
+            message.d.method,
+            message.d.url,
+            message.d.auth,
+            message.d.body,
+            message.d.file,
+            message.d._route,
+            message.d.short
+          );
+
+          this.sendTo(config.id, {
+            op: message.d.requestId,
+            d: {
+              data
+            }
+          });
+        } catch (error: any) {
+          this.sendTo(config.id, {
+            op: message.d.requestId,
+            d: {
+              error: {
+                code: error.code,
+                message: error.message,
+                stack: error.stack
+              }
+            }
+          });
+        }
+
+        break;
       }
     }
   }
