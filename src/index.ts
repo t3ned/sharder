@@ -15,3 +15,4 @@ export * from "./ipc/ClusterIPC";
 export * from "./struct/ClusterQueue";
 export * from "./struct/Logger";
 export * from "./struct/Strategy";
+export * from "./struct/SyncedRequestHandler";

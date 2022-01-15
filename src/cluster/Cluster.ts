@@ -1,4 +1,10 @@
-import { ClusterManager, ClusterIPC, IdentifyPayload, consts } from "../index";
+import {
+  ClusterManager,
+  ClusterIPC,
+  IdentifyPayload,
+  consts,
+  SyncedRequestHandler
+} from "../index";
 import type { Client, ClientOptions } from "eris";
 import cluster from "cluster";
 
@@ -82,8 +88,15 @@ export class Cluster<T extends Client = Client> {
     process.on("uncaughtException", this._handleException.bind(this));
     process.on("unhandledRejection", this._handleRejection.bind(this));
 
-    const { clientOptions, clientBase, token, logger, firstShardId, lastShardId } =
-      this.manager;
+    const {
+      clientOptions,
+      clientBase,
+      token,
+      logger,
+      useSyncedRequestHandler,
+      firstShardId,
+      lastShardId
+    } = this.manager;
 
     // Identify cluster
     await this._identify();
@@ -104,6 +117,8 @@ export class Cluster<T extends Client = Client> {
     const client = new clientBase(token, options);
     Reflect.defineProperty(this, "client", { value: client });
     Reflect.defineProperty(this.client, "cluster", { value: this });
+
+    if (useSyncedRequestHandler) client.requestHandler = new SyncedRequestHandler(this);
 
     client.on("connect", (id) => {
       logger.info(`[C${this.id}] Shard ${id} established a connection`);

@@ -8,5 +8,7 @@ export enum InternalIPCEvents {
   FetchUser,
   FetchGuild,
   FetchChannel,
-  FetchMember
+  FetchMember,
+
+  ApiRequest
 }

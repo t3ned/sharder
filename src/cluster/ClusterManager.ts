@@ -44,6 +44,11 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
   public clientOptions: ClientOptions;
 
   /**
+   * Whether or not to use the synced request handler
+   */
+  public useSyncedRequestHandler: boolean;
+
+  /**
    * The forced shard count
    */
   public shardCountOverride: number;
@@ -122,6 +127,7 @@ export class ClusterManager extends TypedEmitter<ClusterManagerEvents> {
     this.logger = options.logger ?? new Logger();
     this.clientBase = options.clientBase ?? Client;
     this.clientOptions = options.clientOptions ?? { intents: 0 };
+    this.useSyncedRequestHandler = options.useSyncedRequestHandler ?? true;
 
     this.shardCountOverride = options.shardCountOverride ?? 0;
     this.guildsPerShard = options.guildsPerShard ?? 1500;
@@ -380,6 +386,11 @@ export interface ClusterManagerOptions {
    * The options passed to the client
    */
   clientOptions: ClientOptions;
+
+  /**
+   * Whether or not to use the synced request handler
+   */
+  useSyncedRequestHandler: boolean;
 
   /**
    * The forced shard count
